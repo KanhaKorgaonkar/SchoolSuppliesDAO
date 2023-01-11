@@ -12,6 +12,55 @@ const App = () => {
     return nftBalance && nftBalance.gt(0)
   }, [nftBalance]);
 
+  const [memberTokenAmounts, setMemberTokenAmounts] = useState([]);
+  const [memberAddresses, setMemberAddresses] = useState([]);
+
+  const shortenAddress = (str) => {
+    return str.substring(0,6) + '...' + str.substring(str.length - 4);
+  };
+
+  useEffect(() => {
+    if (!hasClaimedNFT){
+      return;
+    }
+    const getAllAddresses = async () => {
+      try {
+        const memberAddresses = await editionDrop?.history.getAllClaimerAddresses(0);setMemberAddresses(memberAddresses);
+        console.log("Member Addresses: ", memberAddresses);
+      } catch (error) {
+        console.log("Failed to get member list ", error);
+      }    
+    };
+    getAllAddresses();
+  }, [hasClaimedNFT, editionDrop?.history]);
+
+  useEffect(() => {
+    if (!hasClaimedNFT){
+      return;
+    }
+
+    const getAllBalances = async () => {
+      try {
+        const amounts = await token?.history.getAllHolderBalances();
+        setMemberTokenAmounts(amounts);
+        console.log("Member Token Amounts: ", amounts);
+      } catch (error) {
+        console.log("Failed to get member list ", error);
+      }
+    };
+    getAllBalances();
+    }, [hasClaimedNFT, token?.history]);
+
+  const memberList = useMemo(() => {
+    return memberAddresses.map((address) => {
+      const member = memberTokenAmounts?.find(({holder}) => holder === address);
+      return{
+        address,
+        tokenAmount: member?.balance.displayValue || '0',
+      };
+    });
+  }, [memberAddresses, memberTokenAmounts]);
+
   if(!address) {
   return (
     <div className="landing">
@@ -27,9 +76,32 @@ const App = () => {
       <div className="member-page">
         <h1>🎒DAO Member Page</h1>
         <p>Congratulations on being a member</p>
+        <div>
+          <div>
+            <h2>Member List</h2>
+            <table className="card">
+              <thead>
+                <tr>
+                  <th>Address</th>
+                  <th>Token Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {memberList.map((member) => {
+                  return (
+                    <tr key={member.address}>
+                      <td>{shortenAddress(member.address)}</td>
+                      <td>{member.tokenAmount}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
-  };
+  }
   return (
     <div className="mint-nft">
       <h1>Mint a 🎒DAO Membership NFT</h1>
